@@ -296,7 +296,7 @@ Now, open the server block file to make adjustments:
 
 Enabling the Changes in Nginx
 
-sudo nginx -t
+    $ sudo nginx -t
 
 If no errors are found, restart Nginx with this command:
 
