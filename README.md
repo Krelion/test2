@@ -70,7 +70,7 @@ Once you have configured the operating system, you can connect from host machine
 
 Configure network interfaces
 
-    $sudo nano /etc/network/interfaces
+    $ sudo nano /etc/network/interfaces
 
     ...
     auto eth0
