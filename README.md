@@ -294,6 +294,26 @@ Now, open the server block file to make adjustments:
             server_name test.devops.su www.test.devops.su;
         ...
 
+### Configure nginx as reverse proxy
+
+    $ sudo nano /etc/nginx/sites-available/default
+
+    upstream tomcat {
+        server 127.0.0.1:9999 fail_timeout=0;
+    }
+
+    server {
+        . . .
+    
+        location / {
+            #try_files $uri $uri/ =404;
+            include proxy_params;
+            proxy_pass http://tomcat/;
+        }
+        
+        . . .
+    }
+
 Enabling the Changes in Nginx
 
     $ sudo nginx -t
@@ -301,3 +321,152 @@ Enabling the Changes in Nginx
 If no errors are found, restart Nginx with this command:
 
     $ sudo systemctl restart nginx
+
+### Check SSL security.
+
+You can use the Qualys SSL Labs Report to see how your server configuration scores:
+
+In a web browser:
+
+https://www.ssllabs.com/ssltest/analyze.html?d=test.devops.su
+
+This SSL setup should report an A+ rating.
+
+### Set Up Auto Renewal SSL certs.
+
+    $ sudo crontab -e
+
+    30 2 * * 1 /usr/bin/certbot renew >> /var/log/le-renew.log
+    35 2 * * 1 /bin/systemctl reload nginx
+
+
+### iptables
+
+Iptables provides packet filtering, network address translation (NAT) and other packet mangling.
+
+In security reason we need to block all incoming connections to all ports, except ssh and nginx ports.
+
+    $sudo nano /etc/iptables.test.rules
+
+    *filter
+        
+    -P INPUT DROP
+    -P FORWARD ACCEPT
+    -P OUTPUT ACCEPT
+    -A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
+    -A INPUT -i lo -j ACCEPT
+    -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+    -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+    -A INPUT -p tcp -m tcp --dport 80 -j ACCEPT
+
+    COMMIT
+
+Activate these new rules:
+
+    $ sudo iptables-restore < /etc/iptables.test.rules
+
+Save the new rules to the master iptables file:
+
+    $ sudo iptables-save > /etc/iptables.up.rules
+
+To make sure the iptables rules are started on a reboot we'll create a new file:
+
+    $ sudo nano /etc/network/if-pre-up.d/iptables
+
+Add these lines to it:
+
+    #!/bin/sh
+    /sbin/iptables-restore < /etc/iptables.up.rules
+
+The file needs to be executable so change the permissions:
+
+    $sudo chmod +x /etc/network/if-pre-up.d/iptables
+
+### Set Up MySQL and configure Master Slave Replication
+
+For communication between two servers, we'll use the internal network.
+
+192.168.55.1 - Master Database
+
+192.168.55.2 - Slave Database
+
+Install MySQL Server and CLI
+
+    $ sudo apt install mysql-server mysql-client
+
+Install addition modules for python
+
+    $ sudo apt install python-mysqldb
+
+Create couple of databases and populate them with data using python scripts randomemailstomysql.py for "CogiaDB1" and randomemailstomysql2.py for "CogiaDB2"
+
+    $ python randomemailstomysql.py
+    $ python randomemailstomysql2.py
+
+Open up the mysql configuration file on the master server "node1".
+
+    $sudo nano /etc/mysql/my.cnf
+
+    ...
+    bind-address            = 192.168.55.1
+    ...
+
+    #uncomment line
+    server-id               = 1
+
+    binlog_do_db            = CogiaDB1
+    binlog_do_db            = CogiaDB2
+
+Refresh MySQL.
+
+    $ sudo service mysql restart
+
+Open up the MySQL shell.
+    
+    $ mysql -u root -p
+
+We need to grant privileges to the slave. You can use this line to name your slave and set up their password. The command should be in this format:
+
+    GRANT REPLICATION SLAVE ON *.* TO 'slave_user'@'%' IDENTIFIED BY 'CogiaTest33';
+
+    FLUSH PRIVILEGES;
+    
+Following that, lock the database to prevent any new changes:
+
+    USE CogiaDB1;
+
+    FLUSH TABLES WITH READ LOCK;
+
+    USE CogiaDB2;
+
+    FLUSH TABLES WITH READ LOCK;
+
+    SHOW MASTER STATUS;
+
+You will see a table that should look something like this:
+
+    +------------------+----------+-------------------+------------------+
+    | File             | Position | Binlog_Do_DB      | Binlog_Ignore_DB |
+    +------------------+----------+-------------------+------------------+
+    | mysql-bin.000003 |      107 | CogiaDB1,CogiaDB2 |                  |
+    +------------------+----------+-------------------+------------------+
+    1 row in set (0.00 sec)
+
+This is the position from which the slave databases will start replicating. Record these numbers, they will come in useful later.
+
+Proceeding the with the database still locked, export your database using mysqldump in the new window 
+
+    $ mysqldump -u root -p --opt CogiaDB1 > CogiaDB1.sql
+    $ mysqldump -u root -p --opt CogiaDB2 > CogiaDB2.sql
+
+Now, returning to your your original window, unlock the databases (making them writeable again). Finish up by exiting the shell.
+
+    UNLOCK TABLES;
+    QUIT;
+
+Copy backups to slave server "node2"
+
+    $ scp ./*.sql krelion@192.168.55.2:~
+
+Now you are all done with the configuration of the the master database.
+
