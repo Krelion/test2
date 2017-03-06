@@ -382,13 +382,31 @@ The file needs to be executable so change the permissions:
 
     $sudo chmod +x /etc/network/if-pre-up.d/iptables
 
+### Nginx log parser
+
+You can analyze nginx log with python script - countresponse.py
+
+    $ sudo python countresponse.py
+
+Output looks like this:
+
+    200 - 126
+    304 - 18
+    404 - 8
+    301 - 5
+    400 - 4
+    302 - 2
+    401 - 1
+    502 - 1
+    500 - 1
+ 
 ### Set Up MySQL and configure Master Slave Replication
 
 For communication between two servers, we'll use the internal network.
 
-192.168.55.1 - Master Database
+- 192.168.55.1 - Master Database
 
-192.168.55.2 - Slave Database
+- 192.168.55.2 - Slave Database
 
 Install MySQL Server and CLI
 
