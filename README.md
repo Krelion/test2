@@ -18,7 +18,7 @@ This command creates a new XML virtual machine definition file.
 
 $ VBoxManage createvm --name "node1" --register
 
-This command changes the properties of a registered virtual machine which is not running. Creates two nic interface - bridged and internal.
+This command changes the properties of a registered virtual machine which is not running. Two interfaces to create a bridged and an internal networks.
 
     $ VBoxManage modifyvm "node1" \
     --ostype Debian_64 \
