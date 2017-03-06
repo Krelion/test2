@@ -172,7 +172,7 @@ To start Tomcat automatically, every time the server re-boots, save this script 
       *) echo "Run as $0 <start|stop|restart>"; exit 1;;
     esac
 
-Now change the permissions of the newly created file and add the correct symlinks automatically:
+Change the permissions of the newly created file and add the correct symlinks automatically:
 
     $ sudo chmod 755 /etc/init.d/tomcat
     $ sudo update-rc.d tomcat defaults
@@ -255,7 +255,7 @@ Before we go any further, let's back up our current server block file:
 
     $ sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
 
-Now, open the server block file to make adjustments:
+Open the server block file to make adjustments:
 
     $ sudo nano /etc/nginx/sites-available/default
 
@@ -486,7 +486,7 @@ Copy backups to slave server "node2"
 
     $ scp ./*.sql krelion@192.168.55.2:~
 
-Now you are all done with the configuration of the the master database.
+All done with the configuration of the the master database.
 
 ## node2
 
@@ -591,7 +591,7 @@ Import the databases that you previously exported from the master databases.
     $ mysql -u root -p CogiaDB1 < ~/CogiaDB1.sql
     $ mysql -u root -p CogiaDB2 < ~/CogiaDB2.sql
 
-Now we need to configure the slave configuration in the same way as we did the master:
+Configure the slave configuration in the same way as we did the master:
 
     $ sudo nano /etc/mysql/my.cnf
 
