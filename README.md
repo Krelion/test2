@@ -563,4 +563,67 @@ Configure network interfaces
 Restart network service
     
     service networking restart
+
+### Set Up MySQL and configure Master Slave Replication
+
+For communication between two servers, we'll use the internal network.
+
+- 192.168.55.1 - Master Database
+
+- 192.168.55.2 - Slave Database
+
+Install MySQL Server and CLI
+
+    $ sudo apt update
+    $ sudo apt install mysql-server mysql-client
+
+Log into slave server "node2", open up the MySQL shell and create the new databases (then exit):
+
+    mysql -u root -p
+
+    CREATE DATABASE CogiaDB1;
+    CREATE DATABASE CogiaDB2;
     
+    EXIT;
+
+Import the databases that you previously exported from the master databases.
+
+    $ mysql -u root -p CogiaDB1 < ~/CogiaDB1.sql
+    $ mysql -u root -p CogiaDB2 < ~/CogiaDB2.sql
+
+Now we need to configure the slave configuration in the same way as we did the master:
+
+    $ sudo nano /etc/mysql/my.cnf
+
+Following that, make sure that your have the following several criteries appropriately filled out:
+
+    bind-address            = 192.168.55.2
+    ...
+    server-id               = 2
+    log_bin                 = /var/log/mysql/mysql-bin.log
+    relay-log               = /var/log/mysql/mysql-relay-bin.log
+    expire_logs_days        = 10
+    max_binlog_size         = 100M
+    binlog_do_db            = CogiaDB1
+    binlog_do_db            = CogiaDB2
+
+Restart MySQL once again:
+
+    $ sudo service mysql restart
+
+Open up the the MySQL shell once again and type in the following details:
+
+    $ mysql -u root -p
+
+    CHANGE MASTER TO MASTER_HOST='192.168.55.1',MASTER_USER='slave_user', MASTER_PASSWORD='CogiaTest33', MASTER_LOG_FILE='mysql-bin.000003', MASTER_LOG_POS = 107;
+
+    START SLAVE;
+
+You be able to see the details of the slave replication by typing in this command. The \G rearranges the text to make it more readable.
+
+    SLAVE STATUS\G
+    
+    EXIT;
+
+
+All done.
