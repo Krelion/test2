@@ -488,3 +488,79 @@ Copy backups to slave server "node2"
 
 Now you are all done with the configuration of the the master database.
 
+## node2
+
+### Configure virtual machine "node2"
+
+This command creates a new XML virtual machine definition file.
+
+$ VBoxManage createvm --name "node2" --register
+
+This command changes the properties of a registered virtual machine which is not running. Creates two nic interface - bridged and internal.
+
+    $ VBoxManage modifyvm "node2" \
+    --ostype Debian_64 \
+    --memory 4096 \
+    --nic1 bridged \
+    --bridgeadapter1 enp6s0 \
+    --cableconnected1 on \
+    --nic2 intnet \
+    --intnet2 localnet \
+    --cableconnected2 on \
+    --acpi on \
+    --ioapic on \
+    --boot1 dvd
+
+Create a 16GB “dynamic” disk.
+ 
+    $ VBoxManage createhd --filename /home/$USER/VirtualBox\ VMs/node2/node2.vdi --size 16000
+
+Add a SATA controller with the dynamic disk attached and mark it as SSD.
+
+    $ VBoxManage storageattach node2 \
+    --storagectl SATA \
+    --port 0 \
+    --type hdd \
+    --nonrotational on \
+    --medium /home/$USER/VirtualBox\ VMs/node2/node2.vdi
+
+Download minimal Debian Jessy ISO image.
+
+    $ wget http://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-8.7.1-amd64-netinst.iso
+
+Add an IDE controller with a DVD drive attached, and the install ISO inserted into the drive:
+
+    $ VBoxManage storagectl node2 --name IDE --add ide
+    $ VBoxManage storageattach node2 \
+    --storagectl IDE \
+    --port 1 \
+    --device 0 \
+    --type dvddrive \
+    --medium /home/$USER/debian-8.7.1-amd64-netinst.iso
+
+Configuration is all done and we can start node2.
+
+    $ VBoxManage startvm node2
+
+Once you have configured the operating system, you can connect from host machine terminal to a server by using SSH.
+
+    $ ssh krelion@192.168.99.218
+
+Configure network interfaces
+
+    $ sudo nano /etc/network/interfaces
+
+    ...
+    auto eth0
+    ...
+    
+    # The secondary network interface for internal network
+    auto eth1
+    iface eth1 inet static
+            address 192.168.55.2
+            netmask 255.255.255.0
+
+Restart network service
+    
+    service networking restart
+    
